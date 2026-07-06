@@ -1,5 +1,10 @@
+import shutil
+import tempfile
+
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.urls import reverse
 
 from .models import Listing
@@ -17,23 +22,81 @@ class ListingModelTests(TestCase):
 
         self.assertEqual(str(listing), 'Vintage Clock')
 
-
-class ListingViewTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username='seller', password='pass12345')
-
-    def test_list_view_shows_listings(self):
-        Listing.objects.create(
-            seller=self.user,
+    def test_listing_defaults_to_other_category(self):
+        user = User.objects.create_user(username='seller', password='pass12345')
+        listing = Listing.objects.create(
+            seller=user,
             title='Vintage Clock',
             description='A small table clock.',
             starting_price='25.00',
         )
 
+        self.assertEqual(listing.category, Listing.Category.OTHER)
+
+
+class ListingViewTests(TestCase):
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp()
+        self.settings_override = override_settings(MEDIA_ROOT=self.media_root)
+        self.settings_override.enable()
+        self.addCleanup(self.settings_override.disable)
+        self.addCleanup(shutil.rmtree, self.media_root, ignore_errors=True)
+        self.user = User.objects.create_user(username='seller', password='pass12345')
+        self.buyer = User.objects.create_user(username='buyer', password='pass12345')
+
+    def make_listing(self, **kwargs):
+        defaults = {
+            'seller': self.user,
+            'title': 'Vintage Clock',
+            'description': 'A small table clock.',
+            'category': Listing.Category.HOME,
+            'starting_price': '25.00',
+        }
+        defaults.update(kwargs)
+        return Listing.objects.create(**defaults)
+
+    def make_image(self):
+        return SimpleUploadedFile(
+            'listing.gif',
+            (
+                b'GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00'
+                b'\xff\xff\xff,\x00\x00\x00\x00\x01\x00\x01\x00'
+                b'\x00\x02\x02D\x01\x00;'
+            ),
+            content_type='image/gif',
+        )
+
+    def test_list_view_shows_listings(self):
+        self.make_listing()
+
         response = self.client.get(reverse('listings:list'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Vintage Clock')
+
+    def test_list_view_filters_by_category(self):
+        self.make_listing(title='Vintage Clock', category=Listing.Category.HOME)
+        self.make_listing(title='Bluetooth Speaker', category=Listing.Category.ELECTRONICS)
+
+        response = self.client.get(
+            reverse('listings:list'),
+            {'category': Listing.Category.ELECTRONICS},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Bluetooth Speaker')
+        self.assertNotContains(response, 'Vintage Clock')
+
+    def test_detail_view_shows_listing(self):
+        listing = self.make_listing()
+
+        response = self.client.get(reverse('listings:detail', args=[listing.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['title'], 'Vintage Clock')
+        self.assertEqual(data['category'], Listing.Category.HOME)
+        self.assertEqual(data['category_display'], 'Home')
 
     def test_logged_in_user_can_create_listing(self):
         self.client.force_login(self.user)
@@ -43,10 +106,94 @@ class ListingViewTests(TestCase):
             {
                 'title': 'Desk Lamp',
                 'description': 'Adjustable lamp.',
+                'category': Listing.Category.HOME,
                 'starting_price': '15.50',
+                'image': self.make_image(),
             },
         )
 
-        self.assertRedirects(response, reverse('listings:list'))
         listing = Listing.objects.get(title='Desk Lamp')
+        self.assertRedirects(response, reverse('listings:detail', args=[listing.pk]))
         self.assertEqual(listing.seller, self.user)
+        self.assertEqual(listing.category, Listing.Category.HOME)
+        self.assertTrue(listing.image.name.startswith('listing_images/'))
+
+    def test_listing_owner_can_update_listing(self):
+        listing = self.make_listing()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('listings:update', args=[listing.pk]),
+            {
+                'title': 'Updated Clock',
+                'description': 'Updated description.',
+                'category': Listing.Category.OTHER,
+                'starting_price': '30.00',
+            },
+        )
+
+        self.assertRedirects(response, reverse('listings:detail', args=[listing.pk]))
+        listing.refresh_from_db()
+        self.assertEqual(listing.title, 'Updated Clock')
+        self.assertEqual(listing.category, Listing.Category.OTHER)
+
+    def test_non_owner_cannot_update_listing(self):
+        listing = self.make_listing()
+        self.client.force_login(self.buyer)
+
+        response = self.client.post(
+            reverse('listings:update', args=[listing.pk]),
+            {
+                'title': 'Changed by buyer',
+                'description': 'Should not save.',
+                'category': Listing.Category.OTHER,
+                'starting_price': '30.00',
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+        listing.refresh_from_db()
+        self.assertEqual(listing.title, 'Vintage Clock')
+
+    def test_listing_owner_can_delete_listing(self):
+        listing = self.make_listing()
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('listings:delete', args=[listing.pk]))
+
+        self.assertRedirects(response, reverse('listings:list'))
+        self.assertFalse(Listing.objects.filter(pk=listing.pk).exists())
+
+    def test_non_owner_cannot_delete_listing(self):
+        listing = self.make_listing()
+        self.client.force_login(self.buyer)
+
+        response = self.client.post(reverse('listings:delete', args=[listing.pk]))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Listing.objects.filter(pk=listing.pk).exists())
+
+    def test_logged_in_user_can_toggle_watchlist(self):
+        listing = self.make_listing()
+        self.client.force_login(self.buyer)
+
+        add_response = self.client.post(reverse('listings:toggle_watchlist', args=[listing.pk]))
+        self.assertRedirects(add_response, reverse('listings:detail', args=[listing.pk]))
+        self.assertTrue(listing.watchers.filter(pk=self.buyer.pk).exists())
+
+        remove_response = self.client.post(reverse('listings:toggle_watchlist', args=[listing.pk]))
+        self.assertRedirects(remove_response, reverse('listings:detail', args=[listing.pk]))
+        self.assertFalse(listing.watchers.filter(pk=self.buyer.pk).exists())
+
+    def test_watchlist_view_shows_watched_listings(self):
+        watched_listing = self.make_listing(title='Watched Clock')
+        other_listing = self.make_listing(title='Ignored Lamp')
+        watched_listing.watchers.add(self.buyer)
+        self.client.force_login(self.buyer)
+
+        response = self.client.get(reverse('listings:watchlist'))
+
+        self.assertEqual(response.status_code, 200)
+        titles = [listing['title'] for listing in response.json()['listings']]
+        self.assertIn(watched_listing.title, titles)
+        self.assertNotIn(other_listing.title, titles)
