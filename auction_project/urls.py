@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path, include
 from listings import views as listing_views
 
@@ -10,3 +12,6 @@ urlpatterns = [
     path('bids/', include('bids.urls')),
     path('timers/', include('timers.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
