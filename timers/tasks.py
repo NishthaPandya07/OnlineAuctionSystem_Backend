@@ -1,14 +1,26 @@
 """Auction timing jobs.
 
-Phase 1 stub — no scheduling yet. Phase 2 wires this into a real
-backend job (Celery/cron/signal) that closes auctions when they end.
+Closes auctions once their end time has passed. Intended to be triggered by
+a scheduled backend job (e.g. a cron entry running the
+``close_expired_auctions`` management command).
 """
+from django.utils import timezone
+
+from bids.models import Bid
 
 
 def close_auction(listing):
-    """Close the auction for ``listing``.
+    """Close ``listing`` if its auction window has ended.
 
-    TODO Phase 2: mark the listing inactive, pick the winning bid,
-    and hook this into the scheduler.
+    Marks the listing inactive and returns the winning ``Bid`` (or ``None``
+    if there were no bids). Returns ``None`` without any effect if the
+    listing is already inactive or hasn't reached its end time yet.
     """
-    return None
+    if not listing.is_active:
+        return None
+    if listing.ends_at is not None and timezone.now() < listing.ends_at:
+        return None
+
+    listing.is_active = False
+    listing.save(update_fields=['is_active'])
+    return Bid.highest_for(listing)

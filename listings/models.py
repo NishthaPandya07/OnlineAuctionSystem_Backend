@@ -1,5 +1,10 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+DEFAULT_AUCTION_DURATION = timedelta(days=7)
 
 
 class Listing(models.Model):
@@ -33,6 +38,7 @@ class Listing(models.Model):
         blank=True,
     )
     is_active = models.BooleanField(default=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -41,3 +47,12 @@ class Listing(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if self.ends_at is None:
+            self.ends_at = timezone.now() + DEFAULT_AUCTION_DURATION
+        super().save(*args, **kwargs)
+
+    @property
+    def has_ended(self):
+        return self.ends_at is not None and timezone.now() >= self.ends_at

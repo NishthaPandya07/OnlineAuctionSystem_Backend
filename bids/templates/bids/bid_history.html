@@ -15,6 +15,12 @@
             </div>
             <p class="text-body-secondary">Seller: {{ listing.seller.username }}</p>
             <p class="fs-4 fw-semibold text-primary">Current price: ${{ current_price }}</p>
+            {% if listing.ends_at %}
+                <p>
+                    Time remaining:
+                    <span class="fw-semibold" data-ends-at="{{ listing.ends_at|date:'c' }}">Loading…</span>
+                </p>
+            {% endif %}
             <p>{{ listing.description }}</p>
         </div>
 
@@ -37,7 +43,7 @@
                 <p><a href="{% url 'accounts:login' %}?next={{ request.path }}">Log in</a> to place a bid.</p>
             {% elif listing.seller_id == user.pk %}
                 <p class="text-body-secondary">You can't bid on your own listing.</p>
-            {% elif not listing.is_active %}
+            {% elif listing.has_ended or not listing.is_active %}
                 <p class="text-body-secondary">This listing is closed for bidding.</p>
             {% endif %}
 

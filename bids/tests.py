@@ -1,8 +1,10 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from listings.models import Listing
 
@@ -95,6 +97,19 @@ class PlaceBidViewTests(TestCase):
 
     def test_cannot_bid_on_inactive_listing(self):
         self.listing.is_active = False
+        self.listing.save()
+        self.client.force_login(self.bidder)
+
+        response = self.client.post(
+            reverse('bids:place', args=[self.listing.pk]),
+            {'amount': '30.00'},
+        )
+
+        self.assertRedirects(response, reverse('bids:history', args=[self.listing.pk]))
+        self.assertEqual(Bid.objects.count(), 0)
+
+    def test_cannot_bid_after_end_time_even_if_still_marked_active(self):
+        self.listing.ends_at = timezone.now() - timedelta(minutes=1)
         self.listing.save()
         self.client.force_login(self.bidder)
 

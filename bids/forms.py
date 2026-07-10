@@ -30,7 +30,7 @@ class BidForm(forms.ModelForm):
         if amount is None or self.listing is None:
             return cleaned_data
 
-        if not self.listing.is_active:
+        if not self.listing.is_active or self.listing.has_ended:
             raise forms.ValidationError('This listing is no longer accepting bids.')
 
         if self.bidder is not None and self.listing.seller_id == self.bidder.pk:

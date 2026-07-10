@@ -24,6 +24,11 @@
                             {% endif %}
                         </div>
                         <p class="fs-5 fw-semibold text-primary mb-2">${{ listing.starting_price }}</p>
+                        {% if listing.ends_at %}
+                            <p class="small text-body-secondary mb-2">
+                                Ends in <span data-ends-at="{{ listing.ends_at|date:'c' }}">…</span>
+                            </p>
+                        {% endif %}
                         <p class="card-text text-body-secondary">{{ listing.description|truncatechars:120 }}</p>
                     </div>
                     <div class="card-footer bg-transparent d-flex justify-content-between small text-body-secondary">
