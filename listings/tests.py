@@ -1,13 +1,15 @@
 import shutil
 import tempfile
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import Listing
+from .models import DEFAULT_AUCTION_DURATION, Listing
 
 
 class ListingModelTests(TestCase):
@@ -32,6 +34,35 @@ class ListingModelTests(TestCase):
         )
 
         self.assertEqual(listing.category, Listing.Category.OTHER)
+
+    def test_listing_defaults_ends_at_to_one_week_out(self):
+        user = User.objects.create_user(username='seller', password='pass12345')
+        before = timezone.now() + DEFAULT_AUCTION_DURATION
+
+        listing = Listing.objects.create(
+            seller=user,
+            title='Vintage Clock',
+            description='A small table clock.',
+            starting_price='25.00',
+        )
+
+        after = timezone.now() + DEFAULT_AUCTION_DURATION
+        self.assertIsNotNone(listing.ends_at)
+        self.assertTrue(before <= listing.ends_at <= after)
+        self.assertFalse(listing.has_ended)
+
+    def test_has_ended_true_once_end_time_passes(self):
+        user = User.objects.create_user(username='seller', password='pass12345')
+        listing = Listing.objects.create(
+            seller=user,
+            title='Vintage Clock',
+            description='A small table clock.',
+            starting_price='25.00',
+        )
+        listing.ends_at = timezone.now() - timedelta(minutes=1)
+        listing.save()
+
+        self.assertTrue(listing.has_ended)
 
 
 class ListingViewTests(TestCase):
