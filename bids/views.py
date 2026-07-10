@@ -16,6 +16,7 @@ def bid_history(request, listing_id):
     can_bid = (
         request.user.is_authenticated
         and listing.is_active
+        and not listing.has_ended
         and listing.seller_id != request.user.pk
     )
     form = BidForm(listing=listing, bidder=request.user) if can_bid else None
