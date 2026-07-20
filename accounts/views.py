@@ -101,3 +101,36 @@ def password_change_view(request):
         for field in form.fields.values():
             field.widget.attrs['class'] = 'form-control'
     return render(request, 'accounts/password_change.html', {'form': form})
+
+
+@login_required
+def seller_dashboard_view(request):
+    from listings.models import Listing
+    from bids.models import Bid
+
+    listings = (
+        Listing.objects
+        .filter(seller=request.user)
+        .prefetch_related('bids__bidder')
+        .order_by('-created_at')
+    )
+
+    dashboard_data = []
+    for listing in listings:
+        highest_bid = Bid.highest_for(listing)
+        dashboard_data.append({
+            'listing': listing,
+            'current_price': Bid.current_price_for(listing),
+            'bid_count': listing.bids.count(),
+            'winner': highest_bid.bidder if listing.has_ended and highest_bid else None,
+        })
+
+    active_count = sum(1 for d in dashboard_data if d['listing'].is_active and not d['listing'].has_ended)
+    total_bids = sum(d['bid_count'] for d in dashboard_data)
+
+    return render(request, 'accounts/seller_dashboard.html', {
+        'dashboard_data': dashboard_data,
+        'total_listings': len(dashboard_data),
+        'active_count': active_count,
+        'total_bids': total_bids,
+    })
