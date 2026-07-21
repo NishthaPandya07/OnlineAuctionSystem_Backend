@@ -13,6 +13,8 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
+        # Mirrors Listing.status == Listing.STATUS_ENDED, expressed as a query
+        # since `status` is a Python property and can't be filtered directly.
         expired = Listing.objects.filter(is_active=True, ends_at__lte=timezone.now())
         count = 0
         for listing in expired:

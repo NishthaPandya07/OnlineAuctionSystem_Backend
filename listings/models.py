@@ -8,6 +8,10 @@ DEFAULT_AUCTION_DURATION = timedelta(days=7)
 
 
 class Listing(models.Model):
+    STATUS_ACTIVE = 'active'
+    STATUS_ENDED = 'ended'
+    STATUS_CLOSED = 'closed'
+
     class Category(models.TextChoices):
         ELECTRONICS = 'electronics', 'Electronics'
         FASHION = 'fashion', 'Fashion'
@@ -56,3 +60,19 @@ class Listing(models.Model):
     @property
     def has_ended(self):
         return self.ends_at is not None and timezone.now() >= self.ends_at
+
+    @property
+    def status(self):
+        """Single source of truth for auction state.
+
+        ``active`` -> still open for bids. ``ended`` -> the end time has
+        passed but ``close_auction`` hasn't processed it yet (bidding is
+        already blocked, but no winner has been picked). ``closed`` ->
+        ``close_auction`` has run and, if there were any bids, a winner has
+        been picked.
+        """
+        if not self.is_active:
+            return self.STATUS_CLOSED
+        if self.has_ended:
+            return self.STATUS_ENDED
+        return self.STATUS_ACTIVE

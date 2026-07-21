@@ -6,7 +6,6 @@ a scheduled backend job (e.g. a cron entry running the
 """
 from django.core.mail import send_mail
 from django.conf import settings
-from django.utils import timezone
 
 from bids.models import Bid
 
@@ -31,14 +30,17 @@ def notify_winner(listing, winning_bid):
 def close_auction(listing):
     """Close ``listing`` if its auction window has ended.
 
-    Marks the listing inactive, marks the highest bid as the winner, and
-    emails the winner. Returns the winning ``Bid`` (or ``None`` if there
-    were no bids). Returns ``None`` without any effect if the listing is
-    already inactive or hasn't reached its end time yet.
+    Only acts on listings whose ``status`` is ``Listing.STATUS_ENDED``
+    (end time passed, not yet processed) - this is a no-op for listings
+    that are still ``active`` or already ``closed``, which also makes it
+    safe to call repeatedly on the same listing.
+
+    Marks the listing ``closed``, marks the highest bid as the winner
+    (breaking any tie by earliest bid, per ``Bid.Meta.ordering``), and
+    emails the winner. Returns the winning ``Bid``, or ``None`` if the
+    listing had no bids or didn't need closing.
     """
-    if not listing.is_active:
-        return None
-    if listing.ends_at is not None and timezone.now() < listing.ends_at:
+    if listing.status != listing.STATUS_ENDED:
         return None
 
     listing.is_active = False

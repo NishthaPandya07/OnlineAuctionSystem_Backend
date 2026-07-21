@@ -20,7 +20,9 @@ class Bid(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-amount', '-created_at']
+        # Tie-break: among equal amounts, the earliest bid wins (first bidder
+        # to reach that price), so ``highest_for`` can just take ``.first()``.
+        ordering = ['-amount', 'created_at']
 
     def __str__(self):
         return f'{self.bidder} bid {self.amount} on {self.listing}'

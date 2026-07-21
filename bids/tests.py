@@ -39,6 +39,16 @@ class BidModelTests(TestCase):
         self.assertEqual(Bid.current_price_for(self.listing), Decimal('45.00'))
         self.assertEqual(Bid.highest_for(self.listing).bidder, other_bidder)
 
+    def test_highest_for_breaks_tie_by_earliest_bid(self):
+        first_bid = Bid.objects.create(listing=self.listing, bidder=self.bidder, amount='45.00')
+        other_bidder = User.objects.create_user(username='bidder2', password='pass12345')
+        second_bid = Bid.objects.create(listing=self.listing, bidder=other_bidder, amount='45.00')
+        # Force a deterministic ordering regardless of auto_now_add precision.
+        Bid.objects.filter(pk=first_bid.pk).update(created_at=timezone.now() - timedelta(minutes=1))
+        Bid.objects.filter(pk=second_bid.pk).update(created_at=timezone.now())
+
+        self.assertEqual(Bid.highest_for(self.listing), first_bid)
+
 
 class PlaceBidViewTests(TestCase):
     def setUp(self):

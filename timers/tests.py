@@ -92,6 +92,49 @@ class CloseAuctionTests(TestCase):
 
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_close_auction_breaks_tied_highest_bids_by_earliest(self):
+        self.listing.ends_at = timezone.now() - timedelta(minutes=1)
+        self.listing.save()
+        earlier_bid = Bid.objects.create(listing=self.listing, bidder=self.bidder, amount='45.00')
+        later_bidder = User.objects.create_user(username='later', password='pass12345')
+        later_bid = Bid.objects.create(listing=self.listing, bidder=later_bidder, amount='45.00')
+        Bid.objects.filter(pk=earlier_bid.pk).update(created_at=timezone.now() - timedelta(minutes=5))
+        Bid.objects.filter(pk=later_bid.pk).update(created_at=timezone.now())
+
+        result = close_auction(self.listing)
+
+        earlier_bid.refresh_from_db()
+        later_bid.refresh_from_db()
+        self.assertEqual(result, earlier_bid)
+        self.assertTrue(earlier_bid.is_winner)
+        self.assertFalse(later_bid.is_winner)
+
+    def test_close_auction_is_idempotent(self):
+        self.listing.ends_at = timezone.now() - timedelta(minutes=1)
+        self.listing.save()
+        emailed_bidder = User.objects.create_user(
+            username='emailed', password='pass12345', email='emailed@example.com',
+        )
+        winning_bid = Bid.objects.create(listing=self.listing, bidder=emailed_bidder, amount='45.00')
+
+        first_result = close_auction(self.listing)
+        self.listing.refresh_from_db()
+        second_result = close_auction(self.listing)
+
+        self.assertEqual(first_result, winning_bid)
+        self.assertIsNone(second_result)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_close_auction_moves_listing_status_from_ended_to_closed(self):
+        self.listing.ends_at = timezone.now() - timedelta(minutes=1)
+        self.listing.save()
+        self.assertEqual(self.listing.status, Listing.STATUS_ENDED)
+
+        close_auction(self.listing)
+
+        self.listing.refresh_from_db()
+        self.assertEqual(self.listing.status, Listing.STATUS_CLOSED)
+
 
 class CloseExpiredAuctionsCommandTests(TestCase):
     def setUp(self):

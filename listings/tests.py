@@ -66,6 +66,42 @@ class ListingModelTests(TestCase):
 
         self.assertTrue(listing.has_ended)
 
+    def test_status_is_active_before_end_time(self):
+        user = User.objects.create_user(username='seller', password='pass12345')
+        listing = Listing.objects.create(
+            seller=user,
+            title='Vintage Clock',
+            description='A small table clock.',
+            starting_price='25.00',
+        )
+
+        self.assertEqual(listing.status, Listing.STATUS_ACTIVE)
+
+    def test_status_is_ended_after_end_time_but_not_yet_closed(self):
+        user = User.objects.create_user(username='seller', password='pass12345')
+        listing = Listing.objects.create(
+            seller=user,
+            title='Vintage Clock',
+            description='A small table clock.',
+            starting_price='25.00',
+        )
+        listing.ends_at = timezone.now() - timedelta(minutes=1)
+        listing.save()
+
+        self.assertEqual(listing.status, Listing.STATUS_ENDED)
+
+    def test_status_is_closed_once_marked_inactive(self):
+        user = User.objects.create_user(username='seller', password='pass12345')
+        listing = Listing.objects.create(
+            seller=user,
+            title='Vintage Clock',
+            description='A small table clock.',
+            starting_price='25.00',
+            is_active=False,
+        )
+
+        self.assertEqual(listing.status, Listing.STATUS_CLOSED)
+
 
 class ListingViewTests(TestCase):
     def setUp(self):
