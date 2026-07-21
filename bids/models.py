@@ -16,6 +16,7 @@ class Bid(models.Model):
         related_name='bids',
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_winner = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
