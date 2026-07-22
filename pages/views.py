@@ -16,6 +16,19 @@ def about(request):
     return render(request, 'pages/about.html')
 
 
+TEAM_MEMBERS = [
+    {'name': 'Nishtha Pandya', 'role': 'Developer'},
+    {'name': 'Bhavik Patel', 'role': 'Developer'},
+    {'name': 'Dhruvi Patel', 'role': 'Developer'},
+    {'name': 'Dhriti Patel', 'role': 'Developer'},
+    {'name': 'Sarhan Kapadiya', 'role': 'Developer'},
+]
+
+
+def team(request):
+    return render(request, 'pages/team.html', {'team_members': TEAM_MEMBERS})
+
+
 def privacy(request):
     return render(request, 'pages/privacy.html')
 

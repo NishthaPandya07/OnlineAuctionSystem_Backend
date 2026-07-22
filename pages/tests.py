@@ -80,6 +80,14 @@ class StaticContentPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'pages/terms.html')
 
+    def test_team_page_renders(self):
+        response = self.client.get(reverse('team'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pages/team.html')
+        self.assertContains(response, 'Nishtha Pandya')
+        self.assertContains(response, 'Dhriti Patel')
+
 
 class FooterTests(TestCase):
     def test_footer_appears_on_every_page(self):
@@ -87,11 +95,12 @@ class FooterTests(TestCase):
 
         self.assertContains(response, 'bi-facebook')
         self.assertContains(response, reverse('about'))
+        self.assertContains(response, reverse('team'))
         self.assertContains(response, reverse('privacy'))
         self.assertContains(response, reverse('terms'))
         self.assertContains(response, 'All rights reserved.')
 
     def test_footer_links_resolve(self):
-        for url_name in ['about', 'privacy', 'terms']:
+        for url_name in ['about', 'team', 'privacy', 'terms']:
             response = self.client.get(reverse(url_name))
             self.assertEqual(response.status_code, 200, f'{url_name} did not return 200')
