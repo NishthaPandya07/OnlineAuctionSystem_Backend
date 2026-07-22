@@ -92,3 +92,64 @@ def cancel_auto_bid(request, listing_id):
     ).update(is_active=False)
     messages.success(request, 'Auto-bid cancelled.')
     return redirect('bids:history', listing_id=listing_id)
+
+
+@login_required
+def edit_bid(request, bid_id):
+    bid = get_object_or_404(Bid, pk=bid_id, bidder=request.user)
+    listing = bid.listing
+
+    if not listing.is_active or listing.has_ended:
+        messages.error(request, 'This auction is closed — bids can no longer be changed.')
+        return redirect('bids:history', listing_id=listing.pk)
+
+    highest = Bid.highest_for(listing)
+    if highest and highest.pk == bid.pk:
+        messages.error(request, 'You cannot edit the current highest bid.')
+        return redirect('bids:history', listing_id=listing.pk)
+
+    if request.method == 'POST':
+        new_amount = request.POST.get('amount')
+        try:
+            from decimal import Decimal, InvalidOperation
+            new_amount = Decimal(new_amount)
+            if new_amount <= 0:
+                raise ValueError
+        except (InvalidOperation, ValueError, TypeError):
+            messages.error(request, 'Please enter a valid bid amount.')
+            return redirect('bids:history', listing_id=listing.pk)
+
+        current_price = Bid.current_price_for(listing)
+        if new_amount > current_price:
+            messages.error(request, 'Use "Place a Bid" for amounts above the current price.')
+            return redirect('bids:history', listing_id=listing.pk)
+
+        bid.amount = new_amount
+        bid.save()
+        messages.success(request, f'Bid updated to ${new_amount}.')
+        return redirect('bids:history', listing_id=listing.pk)
+
+    return render(request, 'bids/edit_bid.html', {
+        'bid': bid,
+        'listing': listing,
+    })
+
+
+@login_required
+@require_POST
+def delete_bid(request, bid_id):
+    bid = get_object_or_404(Bid, pk=bid_id, bidder=request.user)
+    listing = bid.listing
+
+    if not listing.is_active or listing.has_ended:
+        messages.error(request, 'This auction is closed — bids can no longer be removed.')
+        return redirect('bids:history', listing_id=listing.pk)
+
+    highest = Bid.highest_for(listing)
+    if highest and highest.pk == bid.pk:
+        messages.error(request, 'You cannot delete the current highest bid.')
+        return redirect('bids:history', listing_id=listing.pk)
+
+    bid.delete()
+    messages.success(request, 'Bid deleted.')
+    return redirect('bids:history', listing_id=listing.pk)
