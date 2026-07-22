@@ -38,7 +38,9 @@ class AuthPageTests(TestCase):
 
         response = self.client.get(reverse('home'))
 
-        self.assertContains(response, 'Signed in as <strong>bidder</strong>')
+        self.assertContains(response, 'Signed in as')
+        self.assertContains(response, '<strong>bidder</strong>')
+        self.assertContains(response, reverse('accounts:profile'))
         self.assertContains(response, 'Logout')
 
 

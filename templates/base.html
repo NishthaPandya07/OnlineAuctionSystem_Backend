@@ -35,7 +35,10 @@
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
                         <li class="nav-item d-flex align-items-center">
-                            <span class="navbar-text me-3">Signed in as <strong>{{ user.username }}</strong></span>
+                            <span class="navbar-text me-3">
+                                Signed in as
+                                <a href="{% url 'accounts:profile' %}" class="link-light"><strong>{{ user.username }}</strong></a>
+                            </span>
                             <form method="post" action="{% url 'accounts:logout' %}" class="mb-0">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
