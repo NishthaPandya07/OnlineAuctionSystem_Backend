@@ -15,7 +15,7 @@ from .utils import get_recently_viewed_ids
 
 def register_view(request):
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('listings:list')
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
@@ -30,7 +30,7 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('listings:list')
     next_url = request.GET.get('next', '')
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -47,7 +47,7 @@ def login_view(request):
                     redirect_to, allowed_hosts={request.get_host()}
                 ):
                     return redirect(redirect_to)
-                return redirect('home')
+                return redirect('listings:list')
             messages.error(request, 'Invalid username or password.')
     else:
         form = LoginForm()

@@ -79,20 +79,20 @@ class RegisterViewTests(TestCase):
 
         response = self.client.get(reverse('accounts:register'))
 
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse('listings:list'))
 
 
 class LoginViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='bidder', password='pass12345')
 
-    def test_login_with_valid_credentials_redirects_home(self):
+    def test_login_with_valid_credentials_redirects_to_listings(self):
         response = self.client.post(reverse('accounts:login'), {
             'username': 'bidder',
             'password': 'pass12345',
         })
 
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse('listings:list'))
         self.assertIn('_auth_user_id', self.client.session)
 
     def test_login_redirects_to_safe_next_url(self):
@@ -113,7 +113,7 @@ class LoginViewTests(TestCase):
             'next': 'https://evil.example.com/',
         })
 
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse('listings:list'))
 
     def test_login_with_invalid_credentials_shows_error(self):
         response = self.client.post(reverse('accounts:login'), {
@@ -129,7 +129,7 @@ class LoginViewTests(TestCase):
 
         response = self.client.get(reverse('accounts:login'))
 
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse('listings:list'))
 
 
 class LogoutViewTests(TestCase):

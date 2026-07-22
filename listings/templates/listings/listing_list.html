@@ -18,7 +18,7 @@
             >
         </div>
         <div class="col-sm-4">
-            <select name="category" class="form-select" aria-label="Filter by category">
+            <select name="category" class="form-select" aria-label="Filter by category" onchange="this.form.requestSubmit()">
                 <option value="">All categories</option>
                 {% for value, label in categories %}
                     <option value="{{ value }}" {% if value == active_category %}selected{% endif %}>{{ label }}</option>
