@@ -448,3 +448,29 @@ class SeedDemoCommandTests(TestCase):
                 call_command('seed_demo')
 
         self.assertFalse(User.objects.filter(username='admin').exists())
+
+
+class InitialDataFixtureTests(TestCase):
+    """Loading fixtures/initial_data.json should produce a consistent,
+    usable dataset - this is the project's other initial-data path besides
+    the seed_demo management command.
+    """
+    fixtures = ['initial_data']
+
+    def test_fixture_loads_expected_counts(self):
+        from conversations.models import Conversation, Message
+
+        self.assertEqual(User.objects.count(), 4)
+        self.assertEqual(Listing.objects.count(), 3)
+        self.assertEqual(Bid.objects.count(), 5)
+        self.assertEqual(Conversation.objects.count(), 1)
+        self.assertEqual(Message.objects.count(), 2)
+
+    def test_fixture_users_can_authenticate_with_known_password(self):
+        self.assertTrue(self.client.login(username='seller1', password='demopass123'))
+
+    def test_fixture_closed_listing_has_a_winning_bid(self):
+        clock = Listing.objects.get(title='Antique Wall Clock')
+
+        self.assertEqual(clock.status, Listing.STATUS_CLOSED)
+        self.assertTrue(Bid.objects.filter(listing=clock, is_winner=True).exists())
