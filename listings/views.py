@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Max, Q
+from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -75,7 +76,12 @@ class ListingListView(ListView):
         active_category = self.request.GET.get('category', '')
         active_location = self.request.GET.get('location', '').strip()
         category_values = dict(Listing.Category.choices)
-        listings = Listing.objects.select_related('seller').annotate(
+        now = timezone.now()
+        listings = Listing.objects.select_related('seller').filter(
+            is_active=True,
+        ).filter(
+            Q(ends_at__isnull=True) | Q(ends_at__gt=now),
+        ).annotate(
             highest_bid_amount=Max('bids__amount'),
         ).order_by('-created_at')
 
