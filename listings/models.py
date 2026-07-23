@@ -35,6 +35,7 @@ class Listing(models.Model):
         default=Category.OTHER,
     )
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
+    location = models.CharField(max_length=100, blank=True, default='')
     image = models.ImageField(upload_to='listing_images/', blank=True)
     thumbnail = models.ImageField(upload_to='listing_thumbnails/', blank=True)
     watchers = models.ManyToManyField(

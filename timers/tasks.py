@@ -45,8 +45,10 @@ def _product_block(listing):
         f'  Title: {listing.title}',
         f'  Category: {listing.get_category_display()}',
         f'  Starting Price: ${listing.starting_price}',
-        f'  Description: {listing.description}',
     ]
+    if listing.location:
+        lines.append(f'  Location: {listing.location}')
+    lines.append(f'  Description: {listing.description}')
     return '\n'.join(lines)
 
 

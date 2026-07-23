@@ -29,13 +29,17 @@
                                 <span class="badge bg-secondary px-3 py-2" data-listing-status>Closed</span>
                             {% endif %}
                         </div>
-                        <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
                             <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;background:var(--primary-gradient);color:#fff;font-size:.7rem;font-weight:700;">
                                 {{ listing.seller.username|first|upper }}
                             </div>
                             <span class="text-body-secondary small">{{ listing.seller.username }}</span>
                             <span class="text-body-secondary small">&middot;</span>
                             <span class="badge bg-light text-dark" style="font-size:.75rem;">{{ listing.get_category_display }}</span>
+                            {% if listing.location %}
+                                <span class="text-body-secondary small">&middot;</span>
+                                <span class="small text-body-secondary"><i class="bi bi-geo-alt-fill" style="color:var(--danger);"></i> {{ listing.location }}</span>
+                            {% endif %}
                         </div>
                         <h6 class="fw-bold text-body-secondary text-uppercase small mb-2" style="letter-spacing:.5px;">Description</h6>
                         <p class="mb-0" style="line-height:1.7;">{{ listing.description }}</p>
@@ -96,6 +100,21 @@
                         <i class="bi bi-eye me-1"></i> View Bids
                     {% endif %}
                 </a>
+
+                {% if user.is_authenticated and listing.seller_id != user.pk %}
+                    <form method="post" action="{% url 'listings:toggle_watchlist' listing.pk %}" class="mt-2">
+                        {% csrf_token %}
+                        {% if is_watched %}
+                            <button type="submit" class="btn btn-outline-danger btn-lg w-100 py-3" style="font-size:1rem;border-radius:var(--radius);">
+                                <i class="bi bi-heart-fill me-1"></i> Remove from Watchlist
+                            </button>
+                        {% else %}
+                            <button type="submit" class="btn btn-outline-secondary btn-lg w-100 py-3" style="font-size:1rem;border-radius:var(--radius);">
+                                <i class="bi bi-heart me-1"></i> Add to Watchlist
+                            </button>
+                        {% endif %}
+                    </form>
+                {% endif %}
             </div>
         </div>
     </div>
