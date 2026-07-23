@@ -38,6 +38,17 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# Render sets this automatically to the service's *.onrender.com hostname -
+# picking it up here means ALLOWED_HOSTS doesn't need to be hand-configured
+# with a URL that isn't known until after the first deploy.
+_render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if _render_hostname:
+    ALLOWED_HOSTS.append(_render_hostname)
+
+# Required for POST requests (login, bids, forms) to pass Django's CSRF
+# checks once the site is served over HTTPS from any of the above hosts.
+CSRF_TRUSTED_ORIGINS = [f'https://{host}' for host in ALLOWED_HOSTS]
+
 # Outside of local dev, cookies should only ever be sent over HTTPS, and
 # HSTS should be enabled once a real deployment is behind TLS.
 SESSION_COOKIE_SECURE = not DEBUG
@@ -46,6 +57,12 @@ SECURE_SSL_REDIRECT = not DEBUG
 SECURE_HSTS_SECONDS = 0 if DEBUG else 60 * 60 * 24 * 30
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
+
+# Render (like Heroku) terminates TLS at a proxy and forwards plain HTTP
+# internally, tagging the original scheme in this header. Without telling
+# Django to trust it, SECURE_SSL_REDIRECT above would redirect every
+# request forever, since Django would see each one as insecure HTTP.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
