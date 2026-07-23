@@ -21,7 +21,7 @@ class ListingForm(forms.ModelForm):
 
     class Meta:
         model = Listing
-        fields = ['title', 'description', 'category', 'starting_price', 'ends_at', 'image']
+        fields = ['title', 'description', 'category', 'starting_price', 'location', 'ends_at', 'image']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
@@ -29,7 +29,11 @@ class ListingForm(forms.ModelForm):
             'starting_price': forms.NumberInput(
                 attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01'}
             ),
+            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. New York, NY'}),
             'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'location': 'Location',
         }
 
     def __init__(self, *args, **kwargs):

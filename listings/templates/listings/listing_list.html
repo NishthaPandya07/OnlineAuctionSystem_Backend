@@ -17,13 +17,13 @@
 
     <form method="get" action="{% url 'listings:list' %}" class="card border-0 p-3 mb-4">
         <div class="row g-2 align-items-stretch">
-            <div class="col-sm-6">
+            <div class="col-sm-5">
                 <div class="position-relative">
                     <i class="bi bi-search position-absolute" style="left:14px;top:50%;transform:translateY(-50%);color:#bbb;"></i>
                     <input type="search" name="q" class="form-control ps-5" placeholder="Search listings…" value="{{ query }}">
                 </div>
             </div>
-            <div class="col-sm-4">
+            <div class="col-sm-3">
                 <select name="category" class="form-select" onchange="this.form.requestSubmit()">
                     <option value="">All categories</option>
                     {% for value, label in categories %}
@@ -32,9 +32,17 @@
                 </select>
             </div>
             <div class="col-sm-2">
+                <select name="location" class="form-select" onchange="this.form.requestSubmit()">
+                    <option value="">All locations</option>
+                    {% for loc in locations %}
+                        <option value="{{ loc }}" {% if loc == active_location %}selected{% endif %}>{{ loc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-2">
                 <button type="submit" class="btn btn-glow w-100 h-100">Search</button>
             </div>
-            {% if query or active_category %}
+            {% if query or active_category or active_location %}
                 <div class="col-12"><a href="{% url 'listings:list' %}" class="small text-decoration-none text-primary-custom"><i class="bi bi-x-circle me-1"></i>Clear</a></div>
             {% endif %}
         </div>
@@ -79,6 +87,12 @@
                                 <span data-ends-at="{{ listing.ends_at|date:'c' }}">...</span>
                             </p>
                         {% endif %}
+                        {% if listing.location %}
+                            <p class="small mb-2 d-flex align-items-center gap-1 text-body-secondary">
+                                <i class="bi bi-geo-alt-fill" style="color:var(--danger);"></i>
+                                {{ listing.location }}
+                            </p>
+                        {% endif %}
                         <p class="text-body-secondary mb-0" style="font-size:.82rem;line-height:1.5;">{{ listing.description|truncatechars:80 }}</p>
                     </div>
                     <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
@@ -98,10 +112,10 @@
         {% empty %}
             <div class="col-12">
                 <div class="card border-0 empty-state">
-                    {% if query or active_category %}
+                    {% if query or active_category or active_location %}
                         <i class="bi bi-search empty-icon"></i>
                         <h5 class="fw-800">No listings match your search</h5>
-                        <p class="text-body-secondary">Try a different keyword or category.</p>
+                        <p class="text-body-secondary">Try a different keyword, category, or location.</p>
                     {% else %}
                         <i class="bi bi-box-seam empty-icon"></i>
                         <h5 class="fw-800">No listings yet</h5>
@@ -118,7 +132,7 @@
             <ul class="pagination justify-content-center gap-1">
                 <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
                     {% if page_obj.has_previous %}
-                        <a class="page-link border-0 fw-semibold" style="border-radius:10px;" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if active_category %}&category={{ active_category }}{% endif %}"><i class="bi bi-chevron-left"></i> Prev</a>
+                        <a class="page-link border-0 fw-semibold" style="border-radius:10px;" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if active_category %}&category={{ active_category }}{% endif %}{% if active_location %}&location={{ active_location|urlencode }}{% endif %}"><i class="bi bi-chevron-left"></i> Prev</a>
                     {% else %}
                         <span class="page-link border-0" style="border-radius:10px;"><i class="bi bi-chevron-left"></i> Prev</span>
                     {% endif %}
@@ -126,7 +140,7 @@
                 <li class="page-item disabled"><span class="page-link border-0 fw-bold" style="border-radius:10px;">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
                 <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
                     {% if page_obj.has_next %}
-                        <a class="page-link border-0 fw-semibold" style="border-radius:10px;" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if active_category %}&category={{ active_category }}{% endif %}">Next <i class="bi bi-chevron-right"></i></a>
+                        <a class="page-link border-0 fw-semibold" style="border-radius:10px;" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if active_category %}&category={{ active_category }}{% endif %}{% if active_location %}&location={{ active_location|urlencode }}{% endif %}">Next <i class="bi bi-chevron-right"></i></a>
                     {% else %}
                         <span class="page-link border-0" style="border-radius:10px;">Next <i class="bi bi-chevron-right"></i></span>
                     {% endif %}

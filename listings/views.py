@@ -73,6 +73,7 @@ class ListingListView(ListView):
     def get_queryset(self):
         query = self.request.GET.get('q', '').strip()
         active_category = self.request.GET.get('category', '')
+        active_location = self.request.GET.get('location', '').strip()
         category_values = dict(Listing.Category.choices)
         listings = Listing.objects.select_related('seller').annotate(
             highest_bid_amount=Max('bids__amount'),
@@ -84,6 +85,9 @@ class ListingListView(ListView):
         if active_category in category_values:
             listings = listings.filter(category=active_category)
 
+        if active_location:
+            listings = listings.filter(location__icontains=active_location)
+
         return listings
 
     def get_context_data(self, **kwargs):
@@ -94,6 +98,14 @@ class ListingListView(ListView):
         context['categories'] = Listing.Category.choices
         context['active_category'] = active_category
         context['query'] = self.request.GET.get('q', '').strip()
+        context['active_location'] = self.request.GET.get('location', '').strip()
+        context['locations'] = (
+            Listing.objects
+            .exclude(location='')
+            .values_list('location', flat=True)
+            .distinct()
+            .order_by('location')
+        )
         return context
 
 
@@ -129,6 +141,7 @@ def _listing_payload(listing, is_watched, bid_state):
         'description': listing.description,
         'category': listing.category,
         'category_display': listing.get_category_display(),
+        'location': listing.location,
         'starting_price': str(listing.starting_price),
         'current_price': str(bid_state['current_price']),
         'highest_bid_amount': str(highest_bid.amount) if highest_bid else '',
